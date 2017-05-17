@@ -1,4 +1,4 @@
-# .Net Core, Entity Framework Core and Postgresql
+# .Net Core, Entity Framework Core and PostgreSQL
 
 I used to be a .Net developer, nowmy primary job is frontend apps. I always loved how fast and convenient EF Code First is on a product prototype phase. For one of my pet project I decided to build backend server with the latest (May 2017) versions of .Net Core, EF Core and Postgres database.
 
@@ -42,7 +42,7 @@ To run the app we need to install all the packages first and then start the app.
 If you open URL `http://localhost:5000/api/values` in browser you will see the application output.
 
 
-## Entity Framework and Postgresql
+## Entity Framework and PostgreSQL
 
 
 
