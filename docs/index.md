@@ -82,7 +82,7 @@ namespace Data.Entities
 }
 ```
 
-Add `DbContext.cs` file to the `Data` project and put the following code there:
+Add `DataContext.cs` file to the `Data` project and put the following code there:
 ```C#
     using Data.Entities;
     using Microsoft.EntityFrameworkCore;
@@ -100,7 +100,7 @@ Add `DbContext.cs` file to the `Data` project and put the following code there:
     }
 ```
 
-To add some initial data lets create a seeder file in `Data` folder as well
+To add some initial data lets create a seeder file (lets name it `DataContextSeeder.cs`) in `Data` folder as well
 ```c#
     using Data.Entities;
 
@@ -148,16 +148,16 @@ In console `cd` to the `Web` project folder.
 
 Add reference to `Data` project in `Web`:
 ``` bash
-    `
+    dotnet add reference ../Data/Data.csproj
 ```
 
-Add packages to `Web` project:
+Add `Microsoft.EntityFrameworkCore` and `Npgsql.EntityFrameworkCore.PostgreSQL` packages to `Web` project:
 ``` bash
     dotnet add package Microsoft.EntityFrameworkCore
-    dotnet add package Microsoft.EntityFrameworkCore.Tools
+    dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
 ```
 
-In `Startup.cs`, alter `ConfigureServices`:
+In `Startup.cs`, alter `ConfigureServices` method:
 ```c#
     public void ConfigureServices(IServiceCollection services)
     {
@@ -174,15 +174,154 @@ In `Startup.cs`, alter `ConfigureServices`:
         }
         
         services.AddDbContext<DataContext>(opts => opts.UseNpgsql(connectionString));
-
-        var migrationsAssembly = typeof(DataContext).GetTypeInfo().Assembly.GetName().Name;
     }
 ```
 
 
-Add all the required usings.
+Add all the required usings, make sure that `Microsoft.EntityFrameworkCore` is there. Here follow all the usings required so far:
+```c#
+    using Data;
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.EntityFrameworkCore;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
+```
 
-ToDo
-* aadd Postgresql
-* connect controller with db
-* showcase (get real user by API)
+
+Cool! The context is there. Although we need to seed our database with the default data. And here .Тet dependency resolver nicely comes into play. In the same `Startup.cs` add another parameter to `Configure` method and seed the data:
+```c#
+    public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, DataContext dbContext)
+    {
+        loggerFactory.AddConsole(Configuration.GetSection("Logging"));
+        loggerFactory.AddDebug();
+
+        app.UseMvc();
+
+        DataContextSeeder.Seed(dbContext);
+    }
+```
+
+
+It's time to use the context in the controller. Here I'm going to use `DataContext` class directly.
+
+
+In our `Values` controller add new parameter to the constructor and update the CRUD methods.
+``` c#
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Data;
+using Data.Entities;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace Web.Controllers
+{
+    [Route("api/[controller]")]
+    public class ValuesController : Controller
+    {
+        private DataContext _dbContext;
+        public ValuesController(DataContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
+
+        // GET api/values
+        [HttpGet]
+        public async Task<IEnumerable<Value>> Get()
+        {
+            return await _dbContext.Values.ToListAsync();
+        }
+
+        // GET api/values/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult> Get(long id)
+        {
+            var val = await _dbContext.Values.FindAsync(id);
+            if (val == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(val.Num);
+        }
+
+        // POST api/values
+        [HttpPost]
+        public async Task<StatusCodeResult> Post([FromBody]int value)
+        {
+            _dbContext.Values.Add(new Value
+            {
+                Num = value
+            });
+
+            await _dbContext.SaveChangesAsync();
+
+            return Ok();
+        }
+
+        // PUT api/values/5
+        [HttpPut("{id}")]
+        public async Task<StatusCodeResult> Put(long id, [FromBody]int value)
+        {
+            var val = await _dbContext.Values.FindAsync(id);
+            if (val == null)
+            {
+                return NotFound();
+            }
+
+            val.Num = value;
+            await _dbContext.SaveChangesAsync();
+
+            return Ok();
+        }
+
+        // DELETE api/values/5
+        [HttpDelete("{id}")]
+        public async Task<StatusCodeResult> Delete(long id)
+        {
+            var val = await _dbContext.Values.FindAsync(id);
+            if (val == null)
+            {
+                return NotFound();
+            }
+
+            _dbContext.Values.Remove(val);
+            await _dbContext.SaveChangesAsync();
+
+            return Ok();
+        }
+    }
+}
+```
+
+We are ready to run the app. A nice bonus by Microsoft - .Net support watcher. So you can modify code and your app is automatically rebuilt. Add `Microsoft.DotNet.Watcher.Tools` to the `Web.csproj` file:
+``` xml
+    <ItemGroup>
+        <DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="1.0.0" />
+    </ItemGroup>
+```
+
+Then restore and run the app using dotnet watch command. Click [here](https://docs.microsoft.com/en-us/aspnet/core/tutorials/dotnet-watch) for more info.
+
+``` bash
+    dotnet restore
+    dotnet watch run
+```
+
+
+The URL `http://localhost:5000/api/values` returs our default number 42. To add another number send POST request with header `Content-Type: application/json`. Use Fiddler, Postman or another similar tool. The raw request data follows:
+```
+POST http://localhost:5000/api/values HTTP/1.1
+Host: localhost:5000
+Content-Length: 2
+Content-Type: application/json
+
+54
+```
+
+In the same way you can PUT and DELETE values.
+
+That's all for now. Happy coding!
