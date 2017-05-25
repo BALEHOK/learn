@@ -1,28 +1,28 @@
 # .Net Core, Entity Framework Core and PostgreSQL
 
-I used to be a .Net developer, nowmy primary job is frontend apps. I always loved how fast and convenient EF Code First is on a product prototype phase. For one of my pet project I decided to build backend server with the latest (May 2017) versions of .Net Core, EF Core and Postgres database.
+My primary focus is frontend apps. Although I used to be a .Net developer. And I always loved how fast and convenient EF Code First is on a product prototype phase. For one of my pet project I decided to build backend server with the latest (May 2017) versions of .Net Core, EF Core and Postgres database. I had deleted Visual Studio and has used Visual Studion Code. Which is a whole different tool. As you may guess things that are essentian in VS just do not exist in other IDEs (even if authored by Microsoft).
 
 
-In this article I will explane how to make EF Core work with Postgresqs database. At end of the lession we will hane a tiny web API application that can store basic user information and update database when model changes.
+In this article I will explain how to make EF Core work with Postgresqs database with no help of MS Visual Studio 2017. At end of the lession we will have a tiny web API application that can (re)create a database by the model, store and update basic data.
 
 
 ## Setting up the solution
-The first step is to install required libraries for [.Net Core](https://www.microsoft.com/net/core). In VS Code you can just add C# extension and accept all the suggested installs.
+The first step is to [install](https://www.microsoft.com/net/core) the required libraries for .Net Core. In VS Code you can add C# extension and accept all the suggested installs.
 
 
-Create solution directory and two new projects - Data and Web.
+Create solution directory and two new projects - `Data` and `Web`.
 ``` bash
     mkdir app
     cd app 
 ```
 
-We are going to create new Web API project in folder `Web` and Data project in folde `Data` targeting the latest (as of 17.05.2017) .Net Core version.
+We are going to create new Web API project in the folder `Web` and Data project in folde `Data` targeting the latest (as of 25.05.2017) .Net Core version.
 ``` bash
     dotnet new webapi -f netcoreapp1.1 -n Web -o Web
     dotnet new classlib -f netcoreapp1.1 -n Data -o Data
 ```
 
-Now we are ready to create a solutin file and add our projects in the solution:
+Now we are ready to create a solution file and add our projects in the solution:
 ``` bash
     dotnet new sln -n App
     dotnet sln App.sln add Web/Web.csproj Data/Data.csproj
@@ -39,16 +39,17 @@ To run the app we need to install all the packages first and then start the app.
 ```
 
 
-If you open URL `http://localhost:5000/api/values` in browser you will see the application output.
+If you open the URL `http://localhost:5000/api/values` in a browser you will see the application output.
 
 
 ## Entity Framework and PostgreSQL
 
-Lets add Entity Framework to our porject. I'm going to work with Entity Framework Core to stay multiplatform.
+Lets add Entity Framework to our porject. I am going to work with Entity Framework Core.
 
 
 Executing the command `dotnet add package` will add a nuget package reference to a `csproj` file.
 ``` bash
+    cd ../Data
     dotnet add package Microsoft.EntityFrameworkCore
 ```
 
@@ -137,7 +138,7 @@ Set up the connection string in `appsettings.json`, so it looks as follows
     }
   },
   "DbContextSettings" :{
-    "ConnectionString" : "User ID=postgres;Password=pwd;Host=localhost;Port=5432;Database=TtDatabase;Pooling=true;"
+    "ConnectionString" : "User ID=postgres;Password=pwd;Host=localhost;Port=5432;Database=TestDatabase;Pooling=true;"
   }
 }
 ```
@@ -190,7 +191,7 @@ Add all the required usings, make sure that `Microsoft.EntityFrameworkCore` is t
 ```
 
 
-Cool! The context is there. Although we need to seed our database with the default data. And here .Тet dependency resolver nicely comes into play. In the same `Startup.cs` add another parameter to `Configure` method and seed the data:
+Cool! The context is there. Although we need to seed our database with the default data. And here the .Net dependency resolver nicely comes into play. In the same `Startup.cs` add another parameter to `Configure` method and call our data seeder:
 ```c#
     public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, DataContext dbContext)
     {
@@ -204,7 +205,7 @@ Cool! The context is there. Although we need to seed our database with the defau
 ```
 
 
-It's time to use the context in the controller. Here I'm going to use `DataContext` class directly.
+It's time to use the context in the controller. In this example I am going to use `DataContext` class directly.
 
 
 In our `Values` controller add new parameter to the constructor and update the CRUD methods.
@@ -297,7 +298,7 @@ namespace Web.Controllers
 }
 ```
 
-We are ready to run the app. A nice bonus by Microsoft - .Net support watcher. So you can modify code and your app is automatically rebuilt. Add `Microsoft.DotNet.Watcher.Tools` to the `Web.csproj` file:
+We are ready to run the app. A nice bonus by Microsoft - .Net supports watchers. So you can modify the code and your app will rebuild automatically. Add `Microsoft.DotNet.Watcher.Tools` to the `Web.csproj` file:
 ``` xml
     <ItemGroup>
         <DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="1.0.0" />
@@ -324,4 +325,4 @@ Content-Type: application/json
 
 In the same way you can PUT and DELETE values.
 
-That's all for now. Happy coding!
+That is all for now. Happy coding!
