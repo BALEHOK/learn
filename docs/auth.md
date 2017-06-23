@@ -17,6 +17,8 @@ Let's add users to our database.
 update db seader
 ```
 
+To ensure it works lets create a user endpoint and test.
+
 We need to handle login request. Add the Auth controller.
 
 # ToDo

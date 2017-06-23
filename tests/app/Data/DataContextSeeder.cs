@@ -15,6 +15,11 @@ namespace Data
                 Num = 42
             });
 
+            context.Users.Add(new User(){
+                Username = "Alex",
+                Email = "alex@trainig.com"
+            });
+
             context.SaveChanges();
         }
     }
