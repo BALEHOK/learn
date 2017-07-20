@@ -5,6 +5,7 @@ using System;
 using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
 using Web.Models;
+using Web.Auth;
 
 namespace Web.Controllers
 {
@@ -50,12 +51,12 @@ namespace Web.Controllers
         //     return Ok();
         // }
 
-        // [Auth]
-        // [HttpGet("userinfo")]
-        // public object UserInfo()
-        // {
-        //     var user = HttpContext.GetUser();
-        //     return user;
-        // }
+        [Auth]
+        [HttpGet("userinfo")]
+        public object UserInfo()
+        {
+            var user = HttpContext.GetUser();
+            return user;
+        }
     }
 }

@@ -3,15 +3,15 @@
 My primary focus is frontend apps. Although I used to be a .Net developer. And I always loved how fast and convenient EF Code First is on a product prototype phase. For one of my pet project I decided to build backend server with the latest (May 2017) versions of .Net Core, EF Core and Postgres database. I had deleted Visual Studio and has used Visual Studion Code. Which is a whole different tool. As you may guess things that are essentian in VS just do not exist in other IDEs (even if authored by Microsoft).
 
 
-In this article I will explain how to add authentication to .Net Core project. I will not touch here how to create a .Net Core Web API application and connectit with a database. If you are interested read the previous article [.Net Core, Entity Framework Core and PostgreSQL](../). The first part shows the concept of Custom middlewares and Action Filters - I'm going to create my own authorization and authentication middleware. The second part describes how to use authentication mechanisms provided by the .Net Core framework.
+In this article I will explain how to add authentication to .Net Core project. I will not touch here how to create a .Net Core Web API application and connectit with a database. If you are interested read the previous article [.Net Core, Entity Framework Core and PostgreSQL](../). The first part shows the concept of Custom middlewares and Action Filters (which could be very useful but is not nicely covered by documentation) - I'm going to create my own authorization and authentication middleware. The second part describes how to use authentication mechanisms provided by the .Net Core framework.
 At end of the lession we will have a tiny web API application that can handle user authentication, authorization and have protected actions.
 
 
 #Authentication
 
-Authentication in this example is done by the a bit simplified [OAuth2 password grant flow](https://aaronparecki.com/oauth-2-simplified). It allows to exchange username and password for an access token. Obviously, in this case user credentials can be collected by the web app, but that's fine in our case since the web client and the authentication server are provided by us (meaning by the same company).
+Authentication in this example is done by the a little bit simplified [OAuth2 password grant flow](https://aaronparecki.com/oauth-2-simplified). It allows to exchange username and password for an access token. Obviously, in this case user credentials can be collected by the web app, but that's fine in our case since the web client and the authentication server are provided by us (meaning by the same company).
 
-I'm going to explain a simple athentication and authorization first. Later I'll show how we can use built in authentication features of .Net Core framework. THe example in the article is fast to grasp and easy to implement. Think of it as of a starting point to have authentication in your app. It can be enchanced in future if required.
+I'm going to explain a simple athentication and authorization first.  THe example in the article is fast to grasp and easy to implement. Think of it as of a starting point to have authentication in your app that can be enchanced in future if required.
 
 Let's with user model and test user. Create User entity and add it to DataContext.
 ```C#
@@ -146,15 +146,119 @@ public class AuthController : Controller
 
 So here I want to ensure that password entered is correct. In case it's true I create new access token and send it in response.
 
-From now on I'm going to send API requests to server and browser is not the best tool for it. My personal favourites are Fiddler and Postman. Both you can use for free.
+> From now on I'm going to send API requests to server and browser is not the best tool for it. My personal favourites are Fiddler and Postman. Both you can use for free.
 
-So let's test it and ensure that access token is saved in the user entity.
+So far so good. Let's create an action that returns current user.
+1. It should be accessible only by authenticated users.
+1. It should retur the logged in user info.
 
+The idea here. When a client wants to access protected resource it send access token in its request. We can add a middleware in the request processing pipeline (very nice feature, it's not more diffucult in .Net than in Node JS) that checks request headers (access token is usually sent in `Authorization` header), gets a user from database and stores it in the current http context. This is basically mimics the .Net Web API default behavior but os more simplified and understandable (also requires much, I mean MUCH, less googling).
 
+I'm going to put everything related to authentication/authorization in `Auth` folder in the `Web` project. So, middleware.
+```C#
+public class SimpleAuthMiddleware
+{
+    public static int inst = 0;
+    public const string UserKey = "simpleUser";
+    private readonly RequestDelegate _next;
 
+    public SimpleAuthMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
 
-# ToDo
-* implement the custom authorization
-* implement the custom authentification
-* use the .Net provided authorization mechanism
-* use the .Net provided attribute authentification
+    public async Task Invoke(HttpContext httpContext, DataContext dbContext)
+    {
+        string accessToken = httpContext.Request.Headers["Authorization"];
+        if (!string.IsNullOrEmpty(accessToken))
+        {
+            var parts = accessToken.Split(' ');
+            if (parts.Length == 2 && parts[0] == "Bearer")
+            {
+                accessToken = parts[1];
+                var user = dbContext.Users.SingleOrDefault(u => u.AccessToken == accessToken);
+                if (user != null)
+                {
+                    httpContext.Items.Add(UserKey, user);
+                }
+            }
+        }
+        // Call the next middleware delegate in the pipeline 
+        await _next.Invoke(httpContext);
+    }
+}
+```
+
+I expect to receive `Authorization` header with value `Bearer <access token>` and then I get user by access token from the database. If user was found, save it in current context. Perfect! Register the middleware.
+
+Add `Extensions` file in `Auth` folder.
+
+```C#
+public static class Extensions
+{
+    public static IApplicationBuilder UseSimpleAuth(this IApplicationBuilder app)
+    {
+        return app.UseMiddleware<SimpleAuthMiddleware>();
+    }
+}
+```
+
+Update the `Configure` method in `Startup.cs` to register our middleware.
+
+```C#
+public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, DataContext dbContext)
+{
+    loggerFactory.AddConsole(Configuration.GetSection("Logging"));
+    loggerFactory.AddDebug();
+
+    app.UseSimpleAuth();
+
+    app.UseMvc();
+
+    DataContextSeeder.Seed(dbContext);
+}
+```
+
+User is there, we need to be able to get it in an action. Extension can help us here as well.
+```C#
+public static User GetUser(this HttpContext context)
+{
+    return context.Items[SimpleAuthMiddleware.UserKey] as User;
+}
+```
+
+Cool! Don't forget about authorization. For custom authentication we need custom authorization and custon action attribute.
+```C#
+public class AuthAttribute : Attribute, IResourceFilter
+{
+    public void OnResourceExecuting(ResourceExecutingContext context)
+    {
+        var user = context.HttpContext.GetUser();
+        if (user == null)
+        {
+            context.Result = new UnauthorizedResult();
+        }
+    }
+
+    public void OnResourceExecuted(ResourceExecutedContext context)
+    {
+    }
+}
+```
+
+Time to add protected (availabe for authenticated users only) action to `AuthController`.
+```C#
+[Auth]
+[HttpGet("userinfo")]
+public object UserInfo()
+{
+    var user = HttpContext.GetUser();
+    return user;
+}
+```
+
+Using Postman or Fiddler ensure that logged in user has acces to `/userinfo` endpoint, otherwise 401 respose is returned.
+
+Next article is about .Net Web API built in authentication/authorization mechanizm.
+
+That is all for now. Happy coding!
