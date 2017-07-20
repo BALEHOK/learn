@@ -15,9 +15,11 @@ namespace Data
                 Num = 42
             });
 
-            context.Users.Add(new User(){
+            context.Users.Add(new User()
+            {
                 Username = "Alex",
-                Email = "alex@trainig.com"
+                Email = "alex@trainig.com",
+                Password = "password"
             });
 
             context.SaveChanges();

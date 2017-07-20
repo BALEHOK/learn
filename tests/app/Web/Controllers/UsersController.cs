@@ -17,14 +17,14 @@ namespace Web.Controllers
             _dbContext = dbContext;
         }
 
-        // GET api/values
+        // GET api/users
         [HttpGet]
         public async Task<IEnumerable<User>> Get()
         {
             return await _dbContext.Users.ToListAsync();
         }
 
-        // GET api/values/5
+        // GET api/users/5
         [HttpGet("{id}")]
         public async Task<ActionResult> Get(long id)
         {
