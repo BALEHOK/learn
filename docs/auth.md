@@ -1,13 +1,13 @@
 # .Net Core and basics of authentication
 
-My primary focus is frontend apps. Although I used to be a .Net developer. And I always loved how fast and convenient EF Code First is on a product prototype phase. For one of my pet project I decided to build backend server with the latest (May 2017) versions of .Net Core, EF Core and Postgres database. I had deleted Visual Studio and has used Visual Studion Code. Which is a whole different tool. As you may guess things that are essentian in VS just do not exist in other IDEs (even if authored by Microsoft).
+My primary focus is frontend apps. Although I used to be a .Net developer. And I always loved how fast and convenient EF Code First is on a product prototype phase. For one of my pet project I decided to build backend server with the latest (May 2017) versions of .Net Core, EF Core and Postgres database. I had deleted Visual Studio and has used Visual Studion Code. Which is a whole different tool by the way. As you may guess things that are essentian in VS just do not exist in other IDEs (even if authored by Microsoft).
 
 
-In this article I will explain how to add authentication to .Net Core project. I will not touch here how to create a .Net Core Web API application and connectit with a database. If you are interested read the previous article [.Net Core, Entity Framework Core and PostgreSQL](../). The first part shows the concept of Custom middlewares and Action Filters (which could be very useful but is not nicely covered by documentation) - I'm going to create my own authorization and authentication middleware. The second part describes how to use authentication mechanisms provided by the .Net Core framework.
+This is the second article in the [series](../), it will explain how to add authentication to .Net Core project. I will not touch here how to create a .Net Core Web API application and connectit with a database. If you are interested then read the previous article [.Net Core, Entity Framework Core and PostgreSQL](../). The first part shows the concept of Custom middlewares and Action Filters (which could be very useful but is not nicely covered by documentation) - I'm going to create my own authorization and authentication middleware. The second part describes how to use authentication mechanisms provided by the .Net Core framework.
 At end of the lession we will have a tiny web API application that can handle user authentication, authorization and have protected actions.
 
 
-#Authentication
+## Authentication
 
 Authentication in this example is done by the a little bit simplified [OAuth2 password grant flow](https://aaronparecki.com/oauth-2-simplified). It allows to exchange username and password for an access token. Obviously, in this case user credentials can be collected by the web app, but that's fine in our case since the web client and the authentication server are provided by us (meaning by the same company).
 
@@ -147,6 +147,8 @@ public class AuthController : Controller
 So here I want to ensure that password entered is correct. In case it's true I create new access token and send it in response.
 
 > From now on I'm going to send API requests to server and browser is not the best tool for it. My personal favourites are Fiddler and Postman. Both you can use for free.
+
+## Authorization
 
 So far so good. Let's create an action that returns current user.
 1. It should be accessible only by authenticated users.
